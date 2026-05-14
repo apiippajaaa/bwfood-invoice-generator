@@ -172,17 +172,10 @@ const s = StyleSheet.create({
 
 interface Props {
   transaction: TransactionGroup;
-
-  taxRate: number;
-
   logoSrc?: string;
 }
 
-export function SuratJalanPDF({
-  transaction,
-  taxRate,
-  logoSrc = "/logo.png",
-}: Props) {
+export function SuratJalanPDF({ transaction, logoSrc = "/logo.png" }: Props) {
   return (
     <Document>
       <Page size="A4" style={s.page}>

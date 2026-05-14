@@ -44,10 +44,23 @@ const s = StyleSheet.create({
     objectFit: "contain",
   },
 
+  titleWrapper: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   title: {
     fontSize: 24,
     fontFamily: "Helvetica-Bold",
     letterSpacing: 2,
+  },
+
+  suratNumber: {
+    fontSize: 11,
+    fontFamily: "Helvetica",
+    textAlign: "center",
+    letterSpacing: 0.4,
   },
 
   /* =========================
@@ -170,7 +183,11 @@ export function SuratJalanPDF({ transaction, logoSrc = "/logo.png" }: Props) {
         <View style={s.header}>
           <Image src={logoSrc} style={s.logo} />
 
-          <Text style={s.title}>SURAT JALAN</Text>
+          <View style={s.titleWrapper}>
+            <Text style={s.title}>SURAT JALAN</Text>
+
+            <Text style={s.suratNumber}>No. {transaction.noSJ}</Text>
+          </View>
         </View>
 
         {/* CUSTOMER */}

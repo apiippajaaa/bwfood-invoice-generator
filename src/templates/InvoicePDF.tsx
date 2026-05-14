@@ -232,7 +232,7 @@ const s = StyleSheet.create({
 
   totalsBox: {
     width: "30%",
-    marginTop: -1, // nyatu dengan border tabel atas
+    marginTop: -1,
   },
 
   totalRow: {
@@ -251,9 +251,9 @@ const s = StyleSheet.create({
 
   totalValue: {
     width: "54%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+
+    // penting untuk align kanan
+    textAlign: "right",
 
     paddingTop: 5,
     paddingBottom: 4,
@@ -261,7 +261,6 @@ const s = StyleSheet.create({
 
     fontSize: 8,
 
-    // continuation tabel
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderBottomWidth: 1,
@@ -276,6 +275,7 @@ const s = StyleSheet.create({
   totalNumber: {
     fontSize: 8,
     textAlign: "right",
+    fontFamily: "Helvetica-Bold",
   },
 
   // row pertama jangan double border

@@ -22,23 +22,34 @@ export interface TransactionRow {
   
   export interface TransactionGroup {
     noInvoice: string;
+  
     noSJ: string;
+  
     noNota: string;
+  
     namaRelasi: string;
+  
     npwpRelasi: string;
+  
     nikRelasi: string;
+  
     alamatRelasi: string;
+  
     tanggalFakturPajak: string;
+  
     items: TransactionItem[];
+  
     subtotal: number;
-    ppn: number;
-    total: number;
   }
   
   export interface TransactionItem {
     namaBarang: string;
+  
     qty: number;
+  
     satuan: string;
+  
     hargaSatuan: number;
+  
     totalHarga: number;
   }

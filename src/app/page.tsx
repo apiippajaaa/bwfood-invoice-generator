@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
+
 import { pdf } from "@react-pdf/renderer";
+
 import JSZip from "jszip";
 
 import { parseExcel } from "@/lib/parseExcel";
+
+import type { TransactionGroup } from "@/types";
 
 import { DropZone } from "@/components/DropZone";
 import { TransactionTable } from "@/components/TransactionTable";
@@ -12,7 +16,6 @@ import { TransactionTable } from "@/components/TransactionTable";
 import { InvoicePDF } from "@/templates/InvoicePDF";
 import { SuratJalanPDF } from "@/templates/SuratJalanPDF";
 
-import type { TransactionGroup } from "@/types";
 import { Background } from "@/components/layouts/Background";
 
 type DocType = "both" | "invoice" | "suratjalan";
@@ -35,17 +38,59 @@ const DOC_TYPES: {
   },
 ];
 
+const TAX_OPTIONS = [10, 11, 12];
+
+/*
+|--------------------------------------------------------------------------
+| HELPERS
+|--------------------------------------------------------------------------
+*/
+
+const sanitizeFileName = (value: string) => {
+  return value
+    .replace(/\//g, "-")
+    .replace(/[\\:*?"<>|]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+};
+
+const buildFileName = (documentNumber: string, relationName: string) => {
+  const safeDocumentNumber = sanitizeFileName(documentNumber);
+
+  const safeRelationName = sanitizeFileName(relationName);
+
+  return `${safeDocumentNumber} - ${safeRelationName}.pdf`;
+};
+
 export default function HomePage() {
+  /*
+  |--------------------------------------------------------------------------
+  | STATE
+  |--------------------------------------------------------------------------
+  */
+
   const [transactions, setTransactions] = useState<TransactionGroup[]>([]);
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [fileName, setFileName] = useState("");
+
   const [docType, setDocType] = useState<DocType>("both");
 
+  const [taxRate, setTaxRate] = useState<number>(11);
+
   const [isLoading, setIsLoading] = useState(false);
+
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [progress, setProgress] = useState(0);
+
+  /*
+  |--------------------------------------------------------------------------
+  | FILE HANDLER
+  |--------------------------------------------------------------------------
+  */
 
   const handleFile = useCallback((buffer: ArrayBuffer, name: string) => {
     setIsLoading(true);
@@ -54,14 +99,24 @@ export default function HomePage() {
       const groups = parseExcel(buffer);
 
       setTransactions(groups);
+
       setSelected(new Set(groups.map((g) => g.noInvoice)));
+
       setFileName(name);
-    } catch {
-      alert("Gagal membaca file. Pastikan format sesuai dengan template.");
+    } catch (error) {
+      console.error(error);
+
+      alert("Gagal membaca file Excel.");
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  /*
+  |--------------------------------------------------------------------------
+  | SELECT HANDLER
+  |--------------------------------------------------------------------------
+  */
 
   const handleToggle = useCallback((id: string) => {
     setSelected((prev) => {
@@ -85,59 +140,103 @@ export default function HomePage() {
     );
   }, [transactions]);
 
+  /*
+  |--------------------------------------------------------------------------
+  | RESET
+  |--------------------------------------------------------------------------
+  */
+
   const handleReset = () => {
     setTransactions([]);
+
     setSelected(new Set());
+
     setFileName("");
+
     setProgress(0);
+
+    setTaxRate(11);
+
+    setDocType("both");
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | GENERATE PDF
+  |--------------------------------------------------------------------------
+  */
 
   const handleGenerate = async () => {
     const targets = transactions.filter((t) => selected.has(t.noInvoice));
 
-    if (targets.length === 0) return;
+    if (targets.length === 0) {
+      return;
+    }
 
     setIsGenerating(true);
+
     setProgress(0);
 
     try {
       const zip = new JSZip();
 
-      const total = targets.length * (docType === "both" ? 2 : 1);
+      const totalFiles = targets.length * (docType === "both" ? 2 : 1);
 
       let done = 0;
 
       for (const transaction of targets) {
+        /*
+        |--------------------------------------------------------------------------
+        | INVOICE PDF
+        |--------------------------------------------------------------------------
+        */
+
         if (docType === "both" || docType === "invoice") {
           const blob = await pdf(
-            <InvoicePDF transaction={transaction} />
+            <InvoicePDF transaction={transaction} taxRate={taxRate} />
           ).toBlob();
 
-          zip.file(
-            `invoice/${transaction.noInvoice.replace(/\//g, "-")}.pdf`,
-            blob
+          const invoiceFileName = buildFileName(
+            transaction.noInvoice,
+            transaction.namaRelasi
           );
+
+          zip.file(`invoice/${invoiceFileName}`, blob);
 
           done++;
 
-          setProgress(Math.round((done / total) * 100));
+          setProgress(Math.round((done / totalFiles) * 100));
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | SURAT JALAN PDF
+        |--------------------------------------------------------------------------
+        */
 
         if (docType === "both" || docType === "suratjalan") {
           const blob = await pdf(
             <SuratJalanPDF transaction={transaction} />
           ).toBlob();
 
-          zip.file(
-            `surat-jalan/${transaction.noSJ.replace(/\//g, "-")}.pdf`,
-            blob
+          const suratJalanFileName = buildFileName(
+            transaction.noSJ,
+            transaction.namaRelasi
           );
+
+          zip.file(`surat-jalan/${suratJalanFileName}`, blob);
 
           done++;
 
-          setProgress(Math.round((done / total) * 100));
+          setProgress(Math.round((done / totalFiles) * 100));
         }
       }
+
+      /*
+      |--------------------------------------------------------------------------
+      | EXPORT ZIP
+      |--------------------------------------------------------------------------
+      */
 
       const zipBlob = await zip.generateAsync({
         type: "blob",
@@ -148,30 +247,49 @@ export default function HomePage() {
       const link = document.createElement("a");
 
       link.href = url;
-      link.download = `dokumen-${Date.now()}.zip`;
+
+      link.download = `DOKUMEN-${Date.now()}.zip`;
 
       link.click();
 
       URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+
+      alert("Gagal generate PDF.");
     } finally {
       setIsGenerating(false);
+
       setProgress(0);
     }
   };
 
+  /*
+  |--------------------------------------------------------------------------
+  | DERIVED STATE
+  |--------------------------------------------------------------------------
+  */
+
   const selectedCount = selected.size;
 
-  const totalFiles = selectedCount * (docType === "both" ? 2 : 1);
+  const totalFiles = useMemo(() => {
+    return selectedCount * (docType === "both" ? 2 : 1);
+  }, [selectedCount, docType]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | RENDER
+  |--------------------------------------------------------------------------
+  */
 
   return (
     <main className="relative min-h-screen overflow-hidden text-white">
       <Background />
 
-      <div className="relative mx-auto max-w-5xl px-6 py-12">
-        {/* Header */}
+      <div className="relative mx-auto max-w-7xl px-6 py-12">
+        {/* HEADER */}
         <header className="mb-12">
           <div className="mb-3 flex items-center gap-3">
-            {/* Animated Dot */}
             <div className="relative flex h-3 w-3">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
 
@@ -188,19 +306,40 @@ export default function HomePage() {
           </h1>
 
           <p className="mt-2 text-base text-white/40">
-            Upload data Excel, pilih transaksi, generate PDF dalam 1 klik.
+            Upload Excel, pilih transaksi, lalu generate PDF otomatis.
           </p>
         </header>
 
-        {/* Upload */}
+        {/* EMPTY STATE */}
         {transactions.length === 0 ? (
           <DropZone onFile={handleFile} isLoading={isLoading} />
         ) : (
           <section className="space-y-6">
-            {/* File Info */}
-            <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+            {/* FILE INFO */}
+            <div
+              className="
+                flex flex-col gap-5
+                rounded-3xl
+                border border-white/10
+                bg-white/5
+                p-5
+                backdrop-blur-xl
+
+                lg:flex-row
+                lg:items-center
+                lg:justify-between
+              "
+            >
+              {/* LEFT */}
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
+                <div
+                  className="
+                    flex h-11 w-11
+                    items-center justify-center
+                    rounded-2xl
+                    bg-white/10
+                  "
+                >
                   <svg
                     className="h-5 w-5 text-white/70"
                     fill="none"
@@ -217,36 +356,43 @@ export default function HomePage() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-white/80">
+                  <p className="text-sm font-medium text-white/90">
                     {fileName}
                   </p>
 
-                  <p className="text-xs text-white/40">
+                  <p className="mt-1 text-xs text-white/40">
                     {transactions.length} transaksi ditemukan
                   </p>
                 </div>
               </div>
 
+              {/* RIGHT */}
               <button
                 onClick={handleReset}
                 className="
-    group relative overflow-hidden rounded-2xl
-    border border-white/10 bg-white/[0.04]
-    px-5 py-2.5
-    text-sm font-medium text-white/70
-    backdrop-blur-xl
-    transition-all duration-300
-    hover:border-white/20
-    hover:bg-white/[0.08]
-    hover:text-white
-    hover:shadow-[0_0_30px_rgba(255,255,255,0.08)]
-    active:scale-[0.98]
-    cursor-pointer
-  "
+                  group relative overflow-hidden
+                  rounded-2xl
+                  border border-white/10
+                  bg-white/5
+                  px-5 py-3
+                  text-sm font-medium
+                  text-white/70
+                  backdrop-blur-xl
+                  transition-all duration-300
+                  hover:border-white/20
+                  hover:bg-white/10
+                  hover:text-white
+                  active:scale-[0.98]
+                  cursor-pointer
+                "
               >
                 <span className="relative z-10 flex items-center gap-2">
                   <svg
-                    className="h-4 w-4 transition-transform duration-300 group-hover:rotate-[-12deg]"
+                    className="
+                      h-4 w-4
+                      transition-transform duration-300
+                      group-hover:-rotate-12
+                    "
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -260,55 +406,132 @@ export default function HomePage() {
                   </svg>
                   Ganti File
                 </span>
-
-                <div className="absolute inset-0 bg-gradient-to-r from-white/[0.06] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </button>
             </div>
 
-            {/* Document Type */}
-            <div className="flex flex-wrap gap-2">
-              {DOC_TYPES.map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setDocType(type.value)}
-                  className={`
-                    rounded-xl px-4 py-2 text-sm font-medium transition-all cursor-pointer
-                    ${
-                      docType === type.value
-                        ? "bg-white text-black"
-                        : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
-                    }
-                  `}
-                >
-                  {type.label}
-                </button>
-              ))}
+            {/* CONTROLS */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* DOC TYPE */}
+              <div
+                className="
+                  rounded-3xl
+                  border border-white/10
+                  bg-white/5
+                  p-5
+                  backdrop-blur-xl
+                "
+              >
+                <p className="mb-4 text-sm font-medium text-white/50">
+                  Jenis Dokumen
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  {DOC_TYPES.map((type) => (
+                    <button
+                      key={type.value}
+                      onClick={() => setDocType(type.value)}
+                      className={`
+                        rounded-xl px-4 py-2
+                        text-sm font-medium
+                        transition-all
+                        cursor-pointer
+
+                        ${
+                          docType === type.value
+                            ? "bg-white text-black"
+                            : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
+                        }
+                      `}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* TAX */}
+              <div
+                className="
+                  rounded-3xl
+                  border border-white/10
+                  bg-white/5
+                  p-5
+                  backdrop-blur-xl
+                "
+              >
+                <p className="mb-4 text-sm font-medium text-white/50">
+                  Tarif PPN
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  {TAX_OPTIONS.map((rate) => (
+                    <button
+                      key={rate}
+                      onClick={() => setTaxRate(rate)}
+                      className={`
+                        rounded-xl px-4 py-2
+                        text-sm font-medium
+                        transition-all
+                        cursor-pointer
+
+                        ${
+                          taxRate === rate
+                            ? "bg-white text-black"
+                            : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
+                        }
+                      `}
+                    >
+                      PPN {rate}%
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Table */}
+            {/* TABLE */}
             <TransactionTable
               transactions={transactions}
               selected={selected}
+              taxRate={taxRate}
               onToggle={handleToggle}
               onSelectAll={handleSelectAll}
             />
 
-            {/* Footer Action */}
-            <div className="flex flex-col gap-4 pt-2 md:flex-row md:items-center md:justify-between">
-              <p className="text-sm text-white/40">
-                {selectedCount} dari {transactions.length} transaksi dipilih
-                {selectedCount > 0 && (
-                  <span className="ml-2 text-white/30">
-                    → {totalFiles} file PDF
-                  </span>
-                )}
-              </p>
+            {/* FOOTER */}
+            <div
+              className="
+                flex flex-col gap-5
+                pt-2
 
+                lg:flex-row
+                lg:items-center
+                lg:justify-between
+              "
+            >
+              {/* INFO */}
+              <div className="space-y-1">
+                <p className="text-sm text-white/50">
+                  {selectedCount} dari {transactions.length} transaksi dipilih
+                </p>
+
+                {selectedCount > 0 && (
+                  <p className="text-sm text-white/30">
+                    → {totalFiles} file PDF akan dibuat
+                  </p>
+                )}
+              </div>
+
+              {/* BUTTON */}
               <button
                 onClick={handleGenerate}
                 disabled={selectedCount === 0 || isGenerating}
                 className={`
-                  relative rounded-2xl px-7 py-3 text-sm font-medium transition-all cursor-pointer
+                  relative rounded-2xl
+                  px-7 py-3
+                  text-sm font-medium
+                  transition-all
+                  cursor-pointer
+
                   ${
                     selectedCount === 0 || isGenerating
                       ? "cursor-not-allowed bg-white/10 text-white/30"

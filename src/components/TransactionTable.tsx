@@ -1,28 +1,43 @@
 "use client";
 
 import type { TransactionGroup } from "@/types";
+
 import { formatRupiah } from "@/lib/formatters";
 
 interface Props {
   transactions: TransactionGroup[];
+
   selected: Set<string>;
+
+  taxRate: number;
+
   onToggle: (id: string) => void;
+
   onSelectAll: () => void;
 }
 
 export function TransactionTable({
   transactions,
   selected,
+  taxRate,
   onToggle,
   onSelectAll,
 }: Props) {
   const allSelected = selected.size === transactions.length;
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl">
+    <div
+      className="
+        overflow-hidden rounded-3xl
+        border border-white/10
+        bg-white/[0.03]
+        backdrop-blur-xl
+      "
+    >
       {/* Scroll wrapper */}
-      <div className="max-h-[650px] overflow-y-auto custom-scrollbar">
+      <div className="custom-scrollbar max-h-[650px] overflow-y-auto">
         <table className="w-full text-sm">
+          {/* HEADER */}
           <thead className="sticky top-0 z-10 backdrop-blur-xl">
             <tr className="border-b border-white/10 bg-[#111111]">
               <th className="w-10 px-4 py-4">
@@ -51,6 +66,14 @@ export function TransactionTable({
               </th>
 
               <th className="px-4 py-4 text-right font-medium text-white/50">
+                Subtotal
+              </th>
+
+              <th className="px-4 py-4 text-right font-medium text-white/50">
+                PPN {taxRate}%
+              </th>
+
+              <th className="px-4 py-4 text-right font-medium text-white/50">
                 Total
               </th>
 
@@ -60,56 +83,90 @@ export function TransactionTable({
             </tr>
           </thead>
 
+          {/* BODY */}
           <tbody>
-            {transactions.map((t, i) => (
-              <tr
-                key={t.noInvoice}
-                onClick={() => onToggle(t.noInvoice)}
-                className={`
-                  cursor-pointer border-b border-white/5 transition-all duration-200
-                  ${
-                    selected.has(t.noInvoice)
-                      ? "bg-white/[0.07]"
-                      : "hover:bg-white/[0.04]"
-                  }
-                  ${i === transactions.length - 1 ? "border-b-0" : ""}
-                `}
-              >
-                <td className="px-4 py-4">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(t.noInvoice)}
-                    onChange={() => onToggle(t.noInvoice)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="h-4 w-4 accent-white"
-                  />
-                </td>
+            {transactions.map((t, i) => {
+              const ppn = Math.round(t.subtotal * (taxRate / 100));
 
-                <td className="px-4 py-4 font-mono text-xs text-white/90">
-                  {t.noInvoice}
-                </td>
+              const total = t.subtotal + ppn;
 
-                <td className="px-4 py-4 font-mono text-xs text-white/60">
-                  {t.noSJ}
-                </td>
+              const isSelected = selected.has(t.noInvoice);
 
-                <td className="px-4 py-4 text-white/80">{t.namaRelasi}</td>
+              return (
+                <tr
+                  key={t.noInvoice}
+                  onClick={() => onToggle(t.noInvoice)}
+                  className={`
+                    cursor-pointer
+                    border-b border-white/5
+                    transition-all duration-200
 
-                <td className="px-4 py-4 text-xs text-white/50">
-                  {t.tanggalFakturPajak}
-                </td>
+                    ${isSelected ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"}
 
-                <td className="px-4 py-4 text-right font-medium text-white/80">
-                  Rp {formatRupiah(t.total)}
-                </td>
+                    ${i === transactions.length - 1 ? "border-b-0" : ""}
+                  `}
+                >
+                  {/* CHECKBOX */}
+                  <td className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => onToggle(t.noInvoice)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-4 w-4 accent-white"
+                    />
+                  </td>
 
-                <td className="px-4 py-4 text-center">
-                  <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-xs text-white/60">
-                    {t.items.length}
-                  </span>
-                </td>
-              </tr>
-            ))}
+                  {/* INVOICE */}
+                  <td className="px-4 py-4 font-mono text-xs text-white/90">
+                    {t.noInvoice}
+                  </td>
+
+                  {/* SJ */}
+                  <td className="px-4 py-4 font-mono text-xs text-white/60">
+                    {t.noSJ}
+                  </td>
+
+                  {/* CUSTOMER */}
+                  <td className="px-4 py-4 text-white/80">{t.namaRelasi}</td>
+
+                  {/* DATE */}
+                  <td className="px-4 py-4 text-xs text-white/50">
+                    {t.tanggalFakturPajak}
+                  </td>
+
+                  {/* SUBTOTAL */}
+                  <td className="px-4 py-4 text-right font-medium text-white/70">
+                    Rp {formatRupiah(t.subtotal)}
+                  </td>
+
+                  {/* PPN */}
+                  <td className="px-4 py-4 text-right text-white/60">
+                    Rp {formatRupiah(ppn)}
+                  </td>
+
+                  {/* TOTAL */}
+                  <td className="px-4 py-4 text-right font-semibold text-white">
+                    Rp {formatRupiah(total)}
+                  </td>
+
+                  {/* ITEMS */}
+                  <td className="px-4 py-4 text-center">
+                    <span
+                      className="
+                        rounded-full
+                        border border-white/10
+                        bg-white/10
+                        px-2.5 py-1
+                        text-xs text-white/60
+                      "
+                    >
+                      {t.items.length}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

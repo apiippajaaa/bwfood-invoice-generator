@@ -9,6 +9,7 @@ import {
 } from "@react-pdf/renderer";
 
 import type { TransactionGroup } from "@/types";
+
 import { formatRupiah, terbilang } from "@/lib/formatters";
 
 const s = StyleSheet.create({
@@ -25,6 +26,7 @@ const s = StyleSheet.create({
   /* =========================
    * TITLE
    * ========================= */
+
   title: {
     textAlign: "center",
     fontSize: 16,
@@ -36,6 +38,7 @@ const s = StyleSheet.create({
   /* =========================
    * HEADER
    * ========================= */
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -61,10 +64,9 @@ const s = StyleSheet.create({
   /* =========================
    * HEADER RIGHT
    * ========================= */
+
   rightHeader: {
     width: "50%",
-
-    // geser agar sejajar kolom SATUAN
     paddingLeft: 44,
   },
 
@@ -116,6 +118,7 @@ const s = StyleSheet.create({
   /* =========================
    * TABLE
    * ========================= */
+
   table: {
     borderTopWidth: 1,
     borderLeftWidth: 1,
@@ -170,7 +173,6 @@ const s = StyleSheet.create({
     textAlign: "center",
   },
 
-  // patokan garis total
   colSat: {
     width: "12%",
     borderRightWidth: 1,
@@ -191,7 +193,7 @@ const s = StyleSheet.create({
   },
 
   /* =========================
-   * TOTAL + TERBILANG
+   * TOTAL
    * ========================= */
 
   totalsWrapper: {
@@ -218,18 +220,6 @@ const s = StyleSheet.create({
     lineHeight: 1.5,
   },
 
-  /*
-|--------------------------------------------------------------------------
-| TOTALS
-|--------------------------------------------------------------------------
-| dibuat full tabel continuation:
-| - garis kiri nyambung dari colHarga
-| - garis kanan nyambung dari colTotal
-| - garis horizontal antar row
-| - label tidak ada border
-| - value full bordered
-*/
-
   totalsBox: {
     width: "30%",
     marginTop: -1,
@@ -251,8 +241,6 @@ const s = StyleSheet.create({
 
   totalValue: {
     width: "54%",
-
-    // penting untuk align kanan
     textAlign: "right",
 
     paddingTop: 5,
@@ -268,22 +256,6 @@ const s = StyleSheet.create({
     borderColor: "#000",
   },
 
-  rpText: {
-    fontSize: 8,
-  },
-
-  totalNumber: {
-    fontSize: 8,
-    textAlign: "right",
-    fontFamily: "Helvetica-Bold",
-  },
-
-  // row pertama jangan double border
-  totalFirst: {
-    borderTopWidth: 0,
-  },
-
-  // row terakhir penutup tabel
   totalLast: {
     borderBottomWidth: 1,
   },
@@ -291,6 +263,7 @@ const s = StyleSheet.create({
   /* =========================
    * FOOTER
    * ========================= */
+
   footer: {
     marginTop: 28,
     flexDirection: "row",
@@ -337,7 +310,7 @@ const s = StyleSheet.create({
 
   signTitle: {
     fontSize: 8,
-    marginBottom: 55,
+    marginBottom: -10,
   },
 
   signLine: {
@@ -345,23 +318,52 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#000",
   },
+
+  signatureImage: {
+    width: 180,
+    height: 100,
+    objectFit: "contain",
+    marginBottom: -20,
+  },
 });
 
 interface Props {
   transaction: TransactionGroup;
+
+  taxRate: number;
+
   logoSrc?: string;
 }
 
-export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
+export function InvoicePDF({
+  transaction,
+  taxRate,
+  logoSrc = "/logo.png",
+}: Props) {
+  /**
+   * =================================
+   * RUNTIME TAX CALCULATION
+   * =================================
+   */
+
+  const subtotal = transaction.subtotal;
+
+  const ppn = Math.round(subtotal * (taxRate / 100));
+
+  const total = subtotal + ppn;
+
   return (
     <Document>
       <Page size="A4" style={s.page}>
         {/* TITLE */}
+
         <Text style={s.title}>INVOICE</Text>
 
         {/* HEADER */}
+
         <View style={s.header}>
           {/* LEFT */}
+
           <View style={s.leftHeader}>
             <Image src={logoSrc} style={s.logo} />
 
@@ -375,6 +377,7 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
           </View>
 
           {/* RIGHT */}
+
           <View style={s.rightHeader}>
             <View style={s.customerBlock}>
               <Text style={s.kepada}>Kepada Yth :</Text>
@@ -423,8 +426,10 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
         </View>
 
         {/* TABLE */}
+
         <View style={s.table}>
           {/* HEADER */}
+
           <View style={s.tableHeader}>
             <Text style={[s.headerText, s.colNo]}>No</Text>
 
@@ -440,6 +445,7 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
           </View>
 
           {/* ROWS */}
+
           {transaction.items.map((item, idx) => (
             <View key={idx} style={s.row}>
               <Text style={[s.cell, s.colNo]}>{idx + 1}</Text>
@@ -461,46 +467,47 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
           ))}
         </View>
 
-        {/* TOTALS + TERBILANG */}
+        {/* TOTALS */}
+
         <View style={s.totalsWrapper}>
           {/* TERBILANG */}
+
           <View style={s.terbilangWrap}>
             <Text style={s.terbilangLabel}>Terbilang :</Text>
 
-            <Text style={s.terbilangText}>{terbilang(transaction.total)}</Text>
+            <Text style={s.terbilangText}>{terbilang(total)}</Text>
           </View>
 
-          {/* TOTAL */}
+          {/* TOTAL BOX */}
+
           <View style={s.totalsBox}>
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Jumlah</Text>
 
-              <Text style={s.totalValue}>
-                Rp {formatRupiah(transaction.subtotal)}
-              </Text>
+              <Text style={s.totalValue}>Rp {formatRupiah(subtotal)}</Text>
             </View>
 
             <View style={s.totalRow}>
-              <Text style={s.totalLabel}>PPN 10%</Text>
+              <Text style={s.totalLabel}>PPN {taxRate}%</Text>
 
-              <Text style={s.totalValue}>
-                Rp {formatRupiah(transaction.ppn)}
-              </Text>
+              <Text style={s.totalValue}>Rp {formatRupiah(ppn)}</Text>
             </View>
 
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Total</Text>
 
               <Text style={[s.totalValue, s.totalLast]}>
-                Rp {formatRupiah(transaction.total)}
+                Rp {formatRupiah(total)}
               </Text>
             </View>
           </View>
         </View>
 
         {/* FOOTER */}
+
         <View style={s.footer}>
-          {/* LEFT */}
+          {/* BANK */}
+
           <View style={s.bankSection}>
             <Text style={s.footerTitle}>
               Pembayaran mohon dapat ditransfer ke :
@@ -531,9 +538,12 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
             </View>
           </View>
 
-          {/* RIGHT */}
+          {/* SIGN */}
+
           <View style={s.signSection}>
             <Text style={s.signTitle}>Hormat Kami,</Text>
+
+            <Image src="/tandatangan.png" style={s.signatureImage} />
 
             <View style={s.signLine} />
           </View>

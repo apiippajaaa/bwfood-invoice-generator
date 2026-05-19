@@ -23,10 +23,6 @@ const s = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  /* =========================
-   * TITLE
-   * ========================= */
-
   title: {
     textAlign: "center",
     fontSize: 16,
@@ -34,10 +30,6 @@ const s = StyleSheet.create({
     marginBottom: 14,
     letterSpacing: 1,
   },
-
-  /* =========================
-   * HEADER
-   * ========================= */
 
   header: {
     flexDirection: "row",
@@ -60,10 +52,6 @@ const s = StyleSheet.create({
     fontSize: 8,
     lineHeight: 1.4,
   },
-
-  /* =========================
-   * HEADER RIGHT
-   * ========================= */
 
   rightHeader: {
     width: "50%",
@@ -114,10 +102,6 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 8,
   },
-
-  /* =========================
-   * TABLE
-   * ========================= */
 
   table: {
     borderTopWidth: 1,
@@ -192,10 +176,6 @@ const s = StyleSheet.create({
     textAlign: "right",
   },
 
-  /* =========================
-   * TOTAL
-   * ========================= */
-
   totalsWrapper: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -242,27 +222,19 @@ const s = StyleSheet.create({
   totalValue: {
     width: "54%",
     textAlign: "right",
-
     paddingTop: 5,
     paddingBottom: 4,
     paddingHorizontal: 6,
-
     fontSize: 8,
-
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderBottomWidth: 1,
-
     borderColor: "#000",
   },
 
   totalLast: {
     borderBottomWidth: 1,
   },
-
-  /* =========================
-   * FOOTER
-   * ========================= */
 
   footer: {
     marginTop: 28,
@@ -329,9 +301,7 @@ const s = StyleSheet.create({
 
 interface Props {
   transaction: TransactionGroup;
-
   taxRate: number;
-
   logoSrc?: string;
 }
 
@@ -341,29 +311,41 @@ export function InvoicePDF({
   logoSrc = "/logo.png",
 }: Props) {
   /**
-   * =================================
-   * RUNTIME TAX CALCULATION
-   * =================================
+   * =========================
+   * CALCULATION
+   * =========================
    */
 
   const subtotal = transaction.subtotal;
+  const discount = transaction.discount || 0;
 
-  const ppn = Math.round(subtotal * (taxRate / 100));
+  const dpp = discount > 0 ? subtotal - discount : subtotal;
+  const ppn = Math.round(dpp * (taxRate / 100));
+  const total = dpp + ppn;
 
-  const total = subtotal + ppn;
+  /**
+   * inject discount row into table only
+   */
+  const items =
+    discount > 0
+      ? [
+          ...transaction.items,
+          {
+            namaBarang: "Potongan Harga",
+            qty: " ",
+            satuan: " ",
+            hargaSatuan: -discount,
+            totalHarga: -discount,
+          },
+        ]
+      : transaction.items;
 
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        {/* TITLE */}
-
         <Text style={s.title}>INVOICE</Text>
 
-        {/* HEADER */}
-
         <View style={s.header}>
-          {/* LEFT */}
-
           <View style={s.leftHeader}>
             <Image src={logoSrc} style={s.logo} />
 
@@ -376,31 +358,23 @@ export function InvoicePDF({
             </Text>
           </View>
 
-          {/* RIGHT */}
-
           <View style={s.rightHeader}>
             <View style={s.customerBlock}>
               <Text style={s.kepada}>Kepada Yth :</Text>
-
               <Text style={s.customerName}>{transaction.namaRelasi}</Text>
-
               <Text style={s.customerAddress}>{transaction.alamatRelasi}</Text>
             </View>
 
             <View style={s.metaSection}>
               <View style={s.metaRow}>
                 <Text style={s.metaLabel}>No Invoice</Text>
-
                 <Text style={s.metaColon}>:</Text>
-
                 <Text style={s.metaValue}>{transaction.noInvoice}</Text>
               </View>
 
               <View style={s.metaRow}>
                 <Text style={s.metaLabel}>Tgl Invoice</Text>
-
                 <Text style={s.metaColon}>:</Text>
-
                 <Text style={s.metaValue}>
                   {transaction.tanggalFakturPajak}
                 </Text>
@@ -408,45 +382,30 @@ export function InvoicePDF({
 
               <View style={s.metaRow}>
                 <Text style={s.metaLabel}>No PO</Text>
-
                 <Text style={s.metaColon}>:</Text>
-
                 <Text style={s.metaValue}>-</Text>
               </View>
 
               <View style={s.metaRow}>
                 <Text style={s.metaLabel}>No SJ</Text>
-
                 <Text style={s.metaColon}>:</Text>
-
                 <Text style={s.metaValue}>{transaction.noSJ}</Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* TABLE */}
-
         <View style={s.table}>
-          {/* HEADER */}
-
           <View style={s.tableHeader}>
             <Text style={[s.headerText, s.colNo]}>No</Text>
-
             <Text style={[s.headerText, s.colBarang]}>Nama Barang</Text>
-
             <Text style={[s.headerText, s.colQty]}>Qty</Text>
-
             <Text style={[s.headerText, s.colSat]}>Satuan</Text>
-
             <Text style={[s.headerText, s.colHarga]}>Harga Satuan</Text>
-
             <Text style={[s.headerText, s.colTotal]}>Total Harga</Text>
           </View>
 
-          {/* ROWS */}
-
-          {transaction.items.map((item, idx) => (
+          {items.map((item, idx) => (
             <View key={idx} style={s.row}>
               <Text style={[s.cell, s.colNo]}>{idx + 1}</Text>
 
@@ -467,35 +426,25 @@ export function InvoicePDF({
           ))}
         </View>
 
-        {/* TOTALS */}
-
         <View style={s.totalsWrapper}>
-          {/* TERBILANG */}
-
           <View style={s.terbilangWrap}>
             <Text style={s.terbilangLabel}>Terbilang :</Text>
-
             <Text style={s.terbilangText}>{terbilang(total)}</Text>
           </View>
-
-          {/* TOTAL BOX */}
 
           <View style={s.totalsBox}>
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Jumlah</Text>
-
-              <Text style={s.totalValue}>Rp {formatRupiah(subtotal)}</Text>
+              <Text style={s.totalValue}>Rp {formatRupiah(dpp)}</Text>
             </View>
 
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>PPN {taxRate}%</Text>
-
               <Text style={s.totalValue}>Rp {formatRupiah(ppn)}</Text>
             </View>
 
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Total</Text>
-
               <Text style={[s.totalValue, s.totalLast]}>
                 Rp {formatRupiah(total)}
               </Text>
@@ -503,11 +452,7 @@ export function InvoicePDF({
           </View>
         </View>
 
-        {/* FOOTER */}
-
         <View style={s.footer}>
-          {/* BANK */}
-
           <View style={s.bankSection}>
             <Text style={s.footerTitle}>
               Pembayaran mohon dapat ditransfer ke :
@@ -515,36 +460,26 @@ export function InvoicePDF({
 
             <View style={s.bankRow}>
               <Text style={s.bankLabel}>NOMOR REKENING</Text>
-
               <Text style={s.bankColon}>:</Text>
-
               <Text style={s.bankValue}>0300951724</Text>
             </View>
 
             <View style={s.bankRow}>
               <Text style={s.bankLabel}>NAMA REKENING</Text>
-
               <Text style={s.bankColon}>:</Text>
-
               <Text style={s.bankValue}>CV BINTANG WALET</Text>
             </View>
 
             <View style={s.bankRow}>
               <Text style={s.bankLabel}>BANK</Text>
-
               <Text style={s.bankColon}>:</Text>
-
               <Text style={s.bankValue}>BANK CENTRAL ASIA (BCA) KLATEN</Text>
             </View>
           </View>
 
-          {/* SIGN */}
-
           <View style={s.signSection}>
             <Text style={s.signTitle}>Hormat Kami,</Text>
-
             <Image src="/tandatangan.png" style={s.signatureImage} />
-
             <View style={s.signLine} />
           </View>
         </View>

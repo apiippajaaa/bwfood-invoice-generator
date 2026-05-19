@@ -297,7 +297,7 @@ export default function HomePage() {
             </div>
 
             <span className="text-sm font-medium uppercase tracking-[0.2em] text-white/40">
-              Document Generator
+              BW FOOD Document Generator
             </span>
           </div>
 

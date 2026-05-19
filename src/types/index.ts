@@ -40,6 +40,8 @@ export interface TransactionRow {
     items: TransactionItem[];
   
     subtotal: number;
+
+    discount: number;
   }
   
   export interface TransactionItem {

@@ -73,5 +73,7 @@ import type {
       items: [],
   
       subtotal: 0,
+
+      discount: getNumber(row, COL.DISKON),
     };
   }

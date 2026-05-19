@@ -129,14 +129,15 @@ export function terbilang(n: number): string {
   return `${capitalizeWords(result)} Rupiah`;
 }
 
-export function formatRupiah(n: number): string {
-  return new Intl.NumberFormat("id-ID").format(n);
-}
+// ,000
+// export function formatRupiah(n: number): string {
+//   return new Intl.NumberFormat("id-ID").format(n);
+// }
 
 // ,00
-// export function formatRupiah(n: number): string {
-//   return new Intl.NumberFormat("id-ID", {
-//     minimumFractionDigits: 2,
-//     maximumFractionDigits: 2,
-//   }).format(n);
-// }
+export function formatRupiah(n: number): string {
+  return new Intl.NumberFormat("id-ID", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+}

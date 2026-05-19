@@ -319,7 +319,7 @@ export function InvoicePDF({
   const subtotal = transaction.subtotal;
   const discount = transaction.discount || 0;
 
-  const dpp = discount > 0 ? subtotal - discount : subtotal;
+  const dpp = subtotal - discount;
   const ppn = Math.round(dpp * (taxRate / 100));
   const total = dpp + ppn;
 
@@ -334,7 +334,7 @@ export function InvoicePDF({
             namaBarang: "Potongan Harga",
             qty: " ",
             satuan: " ",
-            hargaSatuan: -discount,
+            hargaSatuan: " ",
             totalHarga: -discount,
           },
         ]
@@ -416,7 +416,9 @@ export function InvoicePDF({
               <Text style={[s.cell, s.colSat]}>{item.satuan}</Text>
 
               <Text style={[s.cell, s.colHarga]}>
-                Rp {formatRupiah(item.hargaSatuan)}
+                {typeof item.hargaSatuan === "number"
+                  ? `Rp ${formatRupiah(item.hargaSatuan)}`
+                  : ""}
               </Text>
 
               <Text style={[s.cell, s.colTotal]}>

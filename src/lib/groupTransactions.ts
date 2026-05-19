@@ -3,6 +3,7 @@ import type { TransactionGroup } from "@/types";
 import { COL } from "./constants";
 
 import {
+  getNumber,
   getString,
 } from "./helpers";
 
@@ -30,7 +31,7 @@ export function groupTransactions(
       continue;
     }
 
-    // create group
+    // create invoice group
     if (!map.has(noInvoice)) {
       map.set(
         noInvoice,
@@ -39,6 +40,16 @@ export function groupTransactions(
     }
 
     const group = map.get(noInvoice)!;
+
+    /**
+     * accumulate discount per row
+     * because one invoice can have
+     * multiple rows with discounts
+     */
+    group.discount += getNumber(
+      row,
+      COL.DISKON
+    );
 
     const item = mapTransactionItem(row);
 
@@ -49,6 +60,7 @@ export function groupTransactions(
 
     group.items.push(item);
 
+    // accumulate subtotal from items only
     group.subtotal += item.totalHarga;
   }
 

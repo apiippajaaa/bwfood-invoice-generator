@@ -1,20 +1,22 @@
 "use client";
 
 import type { TransactionGroup } from "@/types";
+
 import { formatRupiah } from "@/lib/formatters";
 
 interface Props {
   transactions: TransactionGroup[];
+
   selected: Set<string>;
-  taxRate: number;
+
   onToggle: (id: string) => void;
+
   onSelectAll: () => void;
 }
 
 export function TransactionTable({
   transactions,
   selected,
-  taxRate,
   onToggle,
   onSelectAll,
 }: Props) {
@@ -30,8 +32,9 @@ export function TransactionTable({
         backdrop-blur-xl
       "
     >
-      <div className="custom-scrollbar max-h-[650px] overflow-y-auto">
-        <table className="w-full text-sm">
+      <div className="custom-scrollbar overflow-x-auto overflow-y-auto max-h-[650px]">
+        <table className="w-full min-w-[1400px] text-sm">
+          {/* HEADER */}
           <thead className="sticky top-0 z-10 backdrop-blur-xl">
             <tr className="border-b border-white/10 bg-[#111111]">
               <th className="w-10 px-4 py-4">
@@ -43,58 +46,71 @@ export function TransactionTable({
                 />
               </th>
 
-              <th className="px-4 py-4 text-left font-medium text-white/50">
+              <th className="px-4 py-4 text-left font-medium text-white/50 whitespace-nowrap">
                 No Invoice
               </th>
 
-              <th className="px-4 py-4 text-left font-medium text-white/50">
+              <th className="px-4 py-4 text-left font-medium text-white/50 whitespace-nowrap">
                 No SJ
               </th>
 
-              <th className="px-4 py-4 text-left font-medium text-white/50">
+              <th className="min-w-[260px] px-4 py-4 text-left font-medium text-white/50 whitespace-nowrap">
                 Nama Relasi
               </th>
 
-              <th className="px-4 py-4 text-left font-medium text-white/50">
+              <th className="px-4 py-4 text-left font-medium text-white/50 whitespace-nowrap">
                 Tanggal
               </th>
 
-              <th className="px-4 py-4 text-right font-medium text-white/50">
+              <th className="px-4 py-4 text-right font-medium text-white/50 whitespace-nowrap">
                 Subtotal
               </th>
 
-              <th className="px-4 py-4 text-right font-medium text-white/50">
+              <th className="px-4 py-4 text-right font-medium text-white/50 whitespace-nowrap">
                 Diskon
               </th>
 
-              <th className="px-4 py-4 text-right font-medium text-white/50">
+              <th className="px-4 py-4 text-right font-medium text-white/50 whitespace-nowrap">
                 Jumlah
               </th>
 
-              <th className="px-4 py-4 text-right font-medium text-white/50">
-                PPN {taxRate}%
+              <th className="px-4 py-4 text-right font-medium text-white/50 whitespace-nowrap">
+                PPN
               </th>
 
-              <th className="px-4 py-4 text-right font-medium text-white/50">
+              <th className="px-4 py-4 text-right font-medium text-white/50 whitespace-nowrap">
                 Total
               </th>
-
-              {/* <th className="px-4 py-4 text-center font-medium text-white/50">
-                Items
-              </th> */}
             </tr>
           </thead>
 
+          {/* BODY */}
           <tbody>
             {transactions.map((t, i) => {
+              /**
+               * subtotal seluruh item
+               */
               const subtotal = t.subtotal;
+
+              /**
+               * total discount invoice
+               */
               const discount = t.discount || 0;
 
-              const dpp = subtotal - discount;
+              /**
+               * jumlah / dpp
+               */
+              const jumlah = subtotal - discount;
 
-              const ppn = Math.round(dpp * (taxRate / 100));
+              /**
+               * gunakan hasil excel asli
+               */
+              const ppn = t.ppn;
 
-              const total = dpp + ppn;
+              /**
+               * total excel asli
+               */
+              const total = t.total;
 
               const isSelected = selected.has(t.noInvoice);
 
@@ -106,7 +122,9 @@ export function TransactionTable({
                     cursor-pointer
                     border-b border-white/5
                     transition-all duration-200
+
                     ${isSelected ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"}
+
                     ${i === transactions.length - 1 ? "border-b-0" : ""}
                   `}
                 >
@@ -122,20 +140,22 @@ export function TransactionTable({
                   </td>
 
                   {/* NO INVOICE */}
-                  <td className="px-4 py-4 font-mono text-xs text-white/90">
+                  <td className="px-4 py-4 font-mono text-xs text-white/90 whitespace-nowrap">
                     {t.noInvoice}
                   </td>
 
                   {/* NO SJ */}
-                  <td className="px-4 py-4 font-mono text-xs text-white/60">
+                  <td className="px-4 py-4 font-mono text-xs text-white/60 whitespace-nowrap">
                     {t.noSJ}
                   </td>
 
-                  {/* CUSTOMER */}
-                  <td className="px-4 py-4 text-white/80">{t.namaRelasi}</td>
+                  {/* NAMA RELASI */}
+                  <td className="px-4 py-4 text-white/80 whitespace-nowrap">
+                    {t.namaRelasi}
+                  </td>
 
-                  {/* DATE */}
-                  <td className="px-4 py-4 text-xs text-white/50">
+                  {/* TANGGAL */}
+                  <td className="px-4 py-4 text-xs text-white/50 whitespace-nowrap">
                     {t.tanggalFakturPajak}
                   </td>
 
@@ -144,14 +164,20 @@ export function TransactionTable({
                     Rp {formatRupiah(subtotal)}
                   </td>
 
-                  {/* DISCOUNT */}
-                  <td className="px-4 py-4 text-right text-red-300 whitespace-nowrap">
-                    {discount > 0 ? `Rp ${formatRupiah(discount)}` : "-"}
+                  {/* DISKON */}
+                  <td className="px-4 py-4 text-right whitespace-nowrap">
+                    {discount > 0 ? (
+                      <span className="text-red-300">
+                        Rp {formatRupiah(discount)}
+                      </span>
+                    ) : (
+                      <span className="text-white/30">-</span>
+                    )}
                   </td>
 
-                  {/* JUMLAH / DPP */}
+                  {/* JUMLAH */}
                   <td className="px-4 py-4 text-right font-medium text-white/70 whitespace-nowrap">
-                    Rp {formatRupiah(dpp)}
+                    Rp {formatRupiah(jumlah)}
                   </td>
 
                   {/* PPN */}
@@ -163,21 +189,6 @@ export function TransactionTable({
                   <td className="px-4 py-4 text-right font-semibold text-white whitespace-nowrap">
                     Rp {formatRupiah(total)}
                   </td>
-
-                  {/* ITEMS */}
-                  {/* <td className="px-4 py-4 text-center">
-                    <span
-                      className="
-                        rounded-full
-                        border border-white/10
-                        bg-white/10
-                        px-2.5 py-1
-                        text-xs text-white/60
-                      "
-                    >
-                      {t.items.length}
-                    </span>
-                  </td> */}
                 </tr>
               );
             })}

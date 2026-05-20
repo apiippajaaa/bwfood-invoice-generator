@@ -301,40 +301,73 @@ const s = StyleSheet.create({
 
 interface Props {
   transaction: TransactionGroup;
-  taxRate: number;
+
   logoSrc?: string;
 }
 
-export function InvoicePDF({
-  transaction,
-  taxRate,
-  logoSrc = "/logo.png",
-}: Props) {
+type PDFItem = {
+  namaBarang: string;
+
+  qty: number | string;
+
+  satuan: string;
+
+  hargaSatuan: number | string;
+
+  totalHarga: number;
+};
+
+export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
   /**
-   * =========================
+   * =====================================
    * CALCULATION
-   * =========================
+   * =====================================
    */
 
+  /**
+   * subtotal = total seluruh item
+   */
   const subtotal = transaction.subtotal;
+
+  /**
+   * total discount invoice
+   */
   const discount = transaction.discount || 0;
 
-  const dpp = subtotal - discount;
-  const ppn = Math.round(dpp * (taxRate / 100));
-  const total = dpp + ppn;
+  /**
+   * jumlah / dpp
+   */
+  const jumlah = subtotal - discount;
 
   /**
-   * inject discount row into table only
+   * gunakan hasil excel asli
+   * supaya support kasus:
+   * ROUND(...)+1 / ROUND(...)-1
    */
-  const items =
+  const ppn = transaction.ppn;
+
+  /**
+   * total asli dari excel
+   */
+  const total = transaction.total;
+
+  /**
+   * tax rate hanya untuk label
+   */
+  const taxRate = jumlah > 0 ? Math.round((ppn / jumlah) * 100) : 11;
+
+  /**
+   * inject discount row ke table
+   */
+  const items: PDFItem[] =
     discount > 0
       ? [
           ...transaction.items,
           {
             namaBarang: "Potongan Harga",
-            qty: " ",
-            satuan: " ",
-            hargaSatuan: " ",
+            qty: "",
+            satuan: "",
+            hargaSatuan: "",
             totalHarga: -discount,
           },
         ]
@@ -345,6 +378,7 @@ export function InvoicePDF({
       <Page size="A4" style={s.page}>
         <Text style={s.title}>INVOICE</Text>
 
+        {/* HEADER */}
         <View style={s.header}>
           <View style={s.leftHeader}>
             <Image src={logoSrc} style={s.logo} />
@@ -361,20 +395,26 @@ export function InvoicePDF({
           <View style={s.rightHeader}>
             <View style={s.customerBlock}>
               <Text style={s.kepada}>Kepada Yth :</Text>
+
               <Text style={s.customerName}>{transaction.namaRelasi}</Text>
+
               <Text style={s.customerAddress}>{transaction.alamatRelasi}</Text>
             </View>
 
             <View style={s.metaSection}>
               <View style={s.metaRow}>
                 <Text style={s.metaLabel}>No Invoice</Text>
+
                 <Text style={s.metaColon}>:</Text>
+
                 <Text style={s.metaValue}>{transaction.noInvoice}</Text>
               </View>
 
               <View style={s.metaRow}>
                 <Text style={s.metaLabel}>Tgl Invoice</Text>
+
                 <Text style={s.metaColon}>:</Text>
+
                 <Text style={s.metaValue}>
                   {transaction.tanggalFakturPajak}
                 </Text>
@@ -382,26 +422,36 @@ export function InvoicePDF({
 
               <View style={s.metaRow}>
                 <Text style={s.metaLabel}>No PO</Text>
+
                 <Text style={s.metaColon}>:</Text>
+
                 <Text style={s.metaValue}>-</Text>
               </View>
 
               <View style={s.metaRow}>
                 <Text style={s.metaLabel}>No SJ</Text>
+
                 <Text style={s.metaColon}>:</Text>
+
                 <Text style={s.metaValue}>{transaction.noSJ}</Text>
               </View>
             </View>
           </View>
         </View>
 
+        {/* TABLE */}
         <View style={s.table}>
           <View style={s.tableHeader}>
             <Text style={[s.headerText, s.colNo]}>No</Text>
+
             <Text style={[s.headerText, s.colBarang]}>Nama Barang</Text>
+
             <Text style={[s.headerText, s.colQty]}>Qty</Text>
+
             <Text style={[s.headerText, s.colSat]}>Satuan</Text>
+
             <Text style={[s.headerText, s.colHarga]}>Harga Satuan</Text>
+
             <Text style={[s.headerText, s.colTotal]}>Total Harga</Text>
           </View>
 
@@ -428,25 +478,30 @@ export function InvoicePDF({
           ))}
         </View>
 
+        {/* TOTAL */}
         <View style={s.totalsWrapper}>
           <View style={s.terbilangWrap}>
             <Text style={s.terbilangLabel}>Terbilang :</Text>
+
             <Text style={s.terbilangText}>{terbilang(total)}</Text>
           </View>
 
           <View style={s.totalsBox}>
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Jumlah</Text>
-              <Text style={s.totalValue}>Rp {formatRupiah(dpp)}</Text>
+
+              <Text style={s.totalValue}>Rp {formatRupiah(jumlah)}</Text>
             </View>
 
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>PPN {taxRate}%</Text>
+
               <Text style={s.totalValue}>Rp {formatRupiah(ppn)}</Text>
             </View>
 
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Total</Text>
+
               <Text style={[s.totalValue, s.totalLast]}>
                 Rp {formatRupiah(total)}
               </Text>
@@ -454,6 +509,7 @@ export function InvoicePDF({
           </View>
         </View>
 
+        {/* FOOTER */}
         <View style={s.footer}>
           <View style={s.bankSection}>
             <Text style={s.footerTitle}>
@@ -462,26 +518,34 @@ export function InvoicePDF({
 
             <View style={s.bankRow}>
               <Text style={s.bankLabel}>NOMOR REKENING</Text>
+
               <Text style={s.bankColon}>:</Text>
+
               <Text style={s.bankValue}>0300951724</Text>
             </View>
 
             <View style={s.bankRow}>
               <Text style={s.bankLabel}>NAMA REKENING</Text>
+
               <Text style={s.bankColon}>:</Text>
+
               <Text style={s.bankValue}>CV BINTANG WALET</Text>
             </View>
 
             <View style={s.bankRow}>
               <Text style={s.bankLabel}>BANK</Text>
+
               <Text style={s.bankColon}>:</Text>
+
               <Text style={s.bankValue}>BANK CENTRAL ASIA (BCA) KLATEN</Text>
             </View>
           </View>
 
           <View style={s.signSection}>
             <Text style={s.signTitle}>Hormat Kami,</Text>
+
             <Image src="/tandatangan.png" style={s.signatureImage} />
+
             <View style={s.signLine} />
           </View>
         </View>

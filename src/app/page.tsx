@@ -38,8 +38,6 @@ const DOC_TYPES: {
   },
 ];
 
-const TAX_OPTIONS = [10, 11, 12];
-
 /*
 |--------------------------------------------------------------------------
 | HELPERS
@@ -77,8 +75,6 @@ export default function HomePage() {
   const [fileName, setFileName] = useState("");
 
   const [docType, setDocType] = useState<DocType>("both");
-
-  const [taxRate, setTaxRate] = useState<number>(11);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -155,8 +151,6 @@ export default function HomePage() {
 
     setProgress(0);
 
-    setTaxRate(11);
-
     setDocType("both");
   };
 
@@ -193,7 +187,7 @@ export default function HomePage() {
 
         if (docType === "both" || docType === "invoice") {
           const blob = await pdf(
-            <InvoicePDF transaction={transaction} taxRate={taxRate} />
+            <InvoicePDF transaction={transaction} />
           ).toBlob();
 
           const invoiceFileName = buildFileName(
@@ -401,7 +395,7 @@ export default function HomePage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={1.8}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 015.418 15m13.001 0H15"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8003 0 015.418 15m13.001 0H15"
                     />
                   </svg>
                   Ganti File
@@ -409,21 +403,26 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* CONTROLS */}
-            <div className="grid gap-4 lg:grid-cols-2">
-              {/* DOC TYPE */}
-              <div
-                className="
-                  rounded-3xl
-                  border border-white/10
-                  bg-white/5
-                  p-5
-                  backdrop-blur-xl
-                "
-              >
-                <p className="mb-4 text-sm font-medium text-white/50">
-                  Jenis Dokumen
-                </p>
+            {/* CONTROL */}
+            {/* <div
+              className="
+                rounded-3xl
+                border border-white/10
+                bg-white/5
+                p-5
+                backdrop-blur-xl
+              "
+            >
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white/50">
+                    Jenis Dokumen
+                  </p>
+
+                  <p className="mt-1 text-xs text-white/30">
+                    PPN sekarang otomatis mengikuti nilai asli dari Excel.
+                  </p>
+                </div>
 
                 <div className="flex flex-wrap gap-2">
                   {DOC_TYPES.map((type) => (
@@ -448,51 +447,12 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
-
-              {/* TAX */}
-              <div
-                className="
-                  rounded-3xl
-                  border border-white/10
-                  bg-white/5
-                  p-5
-                  backdrop-blur-xl
-                "
-              >
-                <p className="mb-4 text-sm font-medium text-white/50">
-                  Tarif PPN
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {TAX_OPTIONS.map((rate) => (
-                    <button
-                      key={rate}
-                      onClick={() => setTaxRate(rate)}
-                      className={`
-                        rounded-xl px-4 py-2
-                        text-sm font-medium
-                        transition-all
-                        cursor-pointer
-
-                        ${
-                          taxRate === rate
-                            ? "bg-white text-black"
-                            : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
-                        }
-                      `}
-                    >
-                      PPN {rate}%
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            </div> */}
 
             {/* TABLE */}
             <TransactionTable
               transactions={transactions}
               selected={selected}
-              taxRate={taxRate}
               onToggle={handleToggle}
               onSelectAll={handleSelectAll}
             />

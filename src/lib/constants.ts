@@ -1,27 +1,32 @@
 export const COL = {
-    NO: 0,
-  
-    NAMA_RELASI: 1,
-    NPWP: 2,
-    NIK: 3,
-    ALAMAT: 4,
-  
-    NO_NOTA: 5,
-    NO_SJ: 6,
-    NO_INVOICE: 7,
-  
-    NAMA_BARANG: 8,
-  
-    NO_FAKTUR_PAJAK: 9,
-    TANGGAL_FAKTUR: 10,
-  
-    QTY: 11,
-    SATUAN: 12,
-    HARGA_SATUAN: 13,
-    TOTAL_HARGA: 14,
-  
-    DISKON: 15,
-    DPP: 16,
-    PPN: 17,
-    JUMLAH_DIBAYAR: 18,
-  } as const;
+  NO: 0,
+  NAMA_RELASI: 1,
+  NPWP_RELASI: 2,
+  NIK_RELASI: 3,
+  ALAMAT_RELASI: 4,
+  NO_NOTA: 5,
+  TGL_NOTA: 6,
+  NO_INVOICE: 7,
+  NO_PO: 8,
+  NO_SJ: 9,
+  DESKRIPSI_BARANG: 10,
+  TONASE: 11,
+  SATUAN: 12,
+  HARGA: 13,
+  HARGA_JUAL: 14,
+  BS_ALLOWANCE: 15,
+  DPP: 16,
+  DPP_NILAI_LAIN: 17,
+  PPN: 18,
+  JUMLAH_DIBAYAR: 19,
+} as const;
+
+export const REQUIRED_HEADERS = [
+  "No Invoice",
+  "Deskripsi Barang",
+  "Tonase",
+  "Satuan",
+  "Harga",
+  "Harga Jual",
+  "Jumlah Dibayar",
+] as const;

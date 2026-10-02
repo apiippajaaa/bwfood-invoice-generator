@@ -1,29 +1,19 @@
-export interface TransactionRow {
-  no: number | null;
-
-  namaRelasi: string;
-  npwpRelasi: string;
-  nikRelasi: string;
-  alamatRelasi: string;
-
-  noNota: string;
-  noSJ: string;
-  noInvoice: string;
-
-  deskripsiBarang: string;
-
-  nomorFakturPajak: string;
-  tanggalFakturPajak: string;
+export interface TransactionItem {
+  namaBarang: string;
 
   tonase: number;
+
   satuan: string;
 
   harga: number;
+
   hargaJual: number;
 
-  diskon: number;
+  bsAllowance: number;
 
-  dasarPengenaanPajak: number;
+  dpp: number;
+
+  dppNilaiLain: number;
 
   ppn: number;
 
@@ -33,9 +23,11 @@ export interface TransactionRow {
 export interface TransactionGroup {
   noInvoice: string;
 
-  noSJ: string;
-
   noNota: string;
+
+  noPO: string;
+
+  noSJ: string;
 
   namaRelasi: string;
 
@@ -45,44 +37,19 @@ export interface TransactionGroup {
 
   alamatRelasi: string;
 
-  tanggalFakturPajak: string;
+  tanggalNota: string;
 
   items: TransactionItem[];
 
-  /**
-   * total semua item
-   */
-  subtotal: number;
+  subtotalHargaJual: number;
 
-  /**
-   * total diskon invoice
-   */
-  discount: number;
+  totalBsAllowance: number;
 
-  /**
-   * ambil dari excel
-   */
-  dpp: number;
+  totalDpp: number;
 
-  /**
-   * ambil dari excel
-   */
-  ppn: number;
+  totalDppNilaiLain: number;
 
-  /**
-   * ambil dari excel
-   */
-  total: number;
-}
+  totalPpn: number;
 
-export interface TransactionItem {
-  namaBarang: string;
-
-  qty: number;
-
-  satuan: string;
-
-  hargaSatuan: number;
-
-  totalHarga: number;
+  totalJumlahDibayar: number;
 }

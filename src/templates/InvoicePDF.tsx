@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import {
   Document,
@@ -301,77 +303,99 @@ const s = StyleSheet.create({
 
 interface Props {
   transaction: TransactionGroup;
-
   logoSrc?: string;
 }
 
+/**
+ * Data item yang ditampilkan oleh PDF.
+ *
+ * Layout PDF lama tetap dipertahankan:
+ * - Qty
+ * - Satuan
+ * - Harga Satuan
+ * - Total Harga
+ *
+ * Yang berubah hanya sumber datanya:
+ * - Qty          ← Tonase Excel
+ * - Harga Satuan ← Harga Excel
+ * - Total Harga  ← Harga Jual Excel
+ */
 type PDFItem = {
   namaBarang: string;
-
   qty: number | string;
-
   satuan: string;
-
   hargaSatuan: number | string;
-
   totalHarga: number;
 };
 
 export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
   /**
-   * =====================================
-   * CALCULATION
-   * =====================================
+   * ==========================================================
+   * EXCEL AS SOURCE OF TRUTH
+   * ==========================================================
+   *
+   * Tidak ada kalkulasi pajak di sini.
+   *
+   * Semua nilai financial langsung menggunakan hasil dari Excel.
+   *
+   * Excel:
+   * DPP
+   * DPP Nilai Lain
+   * PPN
+   * Jumlah Dibayar
+   *
+   * PDF:
+   * Jumlah        ← DPP
+   * PPN 12%       ← PPN Excel
+   * Total         ← Jumlah Dibayar Excel
    */
 
   /**
-   * subtotal = total seluruh item
+   * DPP dari Excel.
+   *
+   * Ini yang ditampilkan sebagai "Jumlah"
+   * pada layout PDF yang sekarang.
    */
-  const subtotal = transaction.subtotal;
+  const jumlah = transaction.totalDpp;
 
   /**
-   * total discount invoice
+   * PPN langsung dari Excel.
+   *
+   * Tidak dihitung ulang.
+   *
+   * Tidak:
+   * Math.round(...)
+   *
+   * Tidak:
+   * jumlah * 0.12
    */
-  const discount = transaction.discount || 0;
+  const ppn = transaction.totalPpn;
 
   /**
-   * jumlah / dpp
+   * Total langsung dari Excel.
    */
-  const jumlah = subtotal - discount;
+  const total = transaction.totalJumlahDibayar;
 
   /**
-   * gunakan hasil excel asli
-   * supaya support kasus:
-   * ROUND(...)+1 / ROUND(...)-1
+   * Item PDF.
+   *
+   * Layout tidak diubah.
+   *
+   * Mapping dari Excel baru:
+   *
+   * Deskripsi Barang → Nama Barang
+   * Tonase           → Qty
+   * Satuan           → Satuan
+   * Harga            → Harga Satuan
+   * Harga Jual       → Total Harga
    */
-  const ppn = transaction.ppn;
-
-  /**
-   * total asli dari excel
-   */
-  const total = transaction.total;
-
-  /**
-   * tax rate hanya untuk label
-   */
-  const taxRate = jumlah > 0 ? Math.round((ppn / jumlah) * 100) : 11;
-
-  /**
-   * inject discount row ke table
-   */
-  const items: PDFItem[] =
-    discount > 0
-      ? [
-          ...transaction.items,
-          {
-            namaBarang: "Potongan Harga",
-            qty: "",
-            satuan: "",
-            hargaSatuan: "",
-            totalHarga: -discount,
-          },
-        ]
-      : transaction.items;
+  const items: PDFItem[] = transaction.items.map((item) => ({
+    namaBarang: item.namaBarang,
+    qty: item.tonase,
+    satuan: item.satuan,
+    hargaSatuan: item.harga,
+    totalHarga: item.hargaJual,
+  }));
 
   return (
     <Document>
@@ -415,9 +439,7 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
 
                 <Text style={s.metaColon}>:</Text>
 
-                <Text style={s.metaValue}>
-                  {transaction.tanggalFakturPajak}
-                </Text>
+                <Text style={s.metaValue}>{transaction.tanggalNota}</Text>
               </View>
 
               <View style={s.metaRow}>
@@ -425,7 +447,7 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
 
                 <Text style={s.metaColon}>:</Text>
 
-                <Text style={s.metaValue}>-</Text>
+                <Text style={s.metaValue}>{transaction.noPO || "-"}</Text>
               </View>
 
               <View style={s.metaRow}>
@@ -466,9 +488,7 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
               <Text style={[s.cell, s.colSat]}>{item.satuan}</Text>
 
               <Text style={[s.cell, s.colHarga]}>
-                {typeof item.hargaSatuan === "number"
-                  ? `Rp ${formatRupiah(item.hargaSatuan)}`
-                  : ""}
+                Rp {formatRupiah(item.hargaSatuan)}
               </Text>
 
               <Text style={[s.cell, s.colTotal]}>
@@ -494,14 +514,13 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
             </View>
 
             <View style={s.totalRow}>
-              <Text style={s.totalLabel}>PPN {taxRate}%</Text>
+              <Text style={s.totalLabel}>PPN 12%</Text>
 
               <Text style={s.totalValue}>Rp {formatRupiah(ppn)}</Text>
             </View>
 
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Total</Text>
-
               <Text style={[s.totalValue, s.totalLast]}>
                 Rp {formatRupiah(total)}
               </Text>
@@ -537,7 +556,7 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
 
               <Text style={s.bankColon}>:</Text>
 
-              <Text style={s.bankValue}>BANK CENTRAL ASIA (BCA) KLATEN</Text>
+              <Text style={s.bankValue}>BANK CENTRAL JAVA (BCA) KLATEN</Text>
             </View>
           </View>
 

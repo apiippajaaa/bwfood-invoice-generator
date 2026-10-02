@@ -4,87 +4,125 @@ import type {
 } from "@/types";
 
 import { COL } from "./constants";
-
 import {
   getNumber,
   getString,
-  parseExcelDate,
+  parseExcelDate
 } from "./helpers";
 
+
+
 export function mapTransactionItem(
-  row: unknown[]
+  row: unknown[],
 ): TransactionItem {
   return {
-    namaBarang: getString(row, COL.NAMA_BARANG),
-
-    qty: getNumber(row, COL.QTY),
-
-    satuan: getString(row, COL.SATUAN),
-
-    hargaSatuan: getNumber(
+    namaBarang: getString(
       row,
-      COL.HARGA_SATUAN
+      COL.DESKRIPSI_BARANG,
     ),
 
-    totalHarga: getNumber(
+    tonase: getNumber(
       row,
-      COL.TOTAL_HARGA
+      COL.TONASE,
+    ),
+
+    satuan: getString(
+      row,
+      COL.SATUAN,
+    ),
+
+    harga: getNumber(
+      row,
+      COL.HARGA,
+    ),
+
+    hargaJual: getNumber(
+      row,
+      COL.HARGA_JUAL,
+    ),
+
+    bsAllowance: getNumber(
+      row,
+      COL.BS_ALLOWANCE,
+    ),
+
+    dpp: getNumber(
+      row,
+      COL.DPP,
+    ),
+
+    dppNilaiLain: getNumber(
+      row,
+      COL.DPP_NILAI_LAIN,
+    ),
+
+    ppn: getNumber(
+      row,
+      COL.PPN,
+    ),
+
+    jumlahDibayar: getNumber(
+      row,
+      COL.JUMLAH_DIBAYAR,
     ),
   };
 }
 
 export function createTransactionGroup(
-  row: unknown[]
+  row: unknown[],
 ): TransactionGroup {
   return {
     noInvoice: getString(
       row,
-      COL.NO_INVOICE
+      COL.NO_INVOICE,
     ),
 
-    noSJ: getString(row, COL.NO_SJ),
+    noNota: getString(
+      row,
+      COL.NO_NOTA,
+    ),
 
-    noNota: getString(row, COL.NO_NOTA),
+    noPO: getString(
+      row,
+      COL.NO_PO,
+    ),
+
+    noSJ: getString(
+      row,
+      COL.NO_SJ,
+    ),
 
     namaRelasi: getString(
       row,
-      COL.NAMA_RELASI
+      COL.NAMA_RELASI,
     ),
 
     npwpRelasi: getString(
       row,
-      COL.NPWP
+      COL.NPWP_RELASI,
     ),
 
     nikRelasi: getString(
       row,
-      COL.NIK
+      COL.NIK_RELASI,
     ),
 
     alamatRelasi: getString(
       row,
-      COL.ALAMAT
+      COL.ALAMAT_RELASI,
     ),
 
-    tanggalFakturPajak: parseExcelDate(
-      row[COL.TANGGAL_FAKTUR]
+    tanggalNota: parseExcelDate(
+      row[COL.TGL_NOTA],
     ),
 
     items: [],
 
-    subtotal: 0,
-
-    discount: 0,
-
-    /**
-     * IMPORTANT
-     * jangan ambil row pertama
-     * karena invoice bisa multi item
-     */
-    dpp: 0,
-
-    ppn: 0,
-
-    total: 0,
+    subtotalHargaJual: 0,
+    totalBsAllowance: 0,
+    totalDpp: 0,
+    totalDppNilaiLain: 0,
+    totalPpn: 0,
+    totalJumlahDibayar: 0,
   };
 }

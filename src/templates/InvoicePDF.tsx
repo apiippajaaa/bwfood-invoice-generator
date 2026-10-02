@@ -393,7 +393,7 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
     namaBarang: item.namaBarang,
     qty: item.tonase,
     satuan: item.satuan,
-    hargaSatuan: item.harga,
+    hargaSatuan: Number(item.harga),
     totalHarga: item.hargaJual,
   }));
 

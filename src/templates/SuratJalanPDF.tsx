@@ -15,8 +15,6 @@ const s = StyleSheet.create({
     fontFamily: "Helvetica",
     fontSize: 10,
     backgroundColor: "#fff",
-
-    // padding diperbesar
     paddingTop: 30,
     paddingBottom: 30,
     paddingHorizontal: 52,
@@ -33,12 +31,10 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
 
-  // logo pojok kiri
   logo: {
     position: "absolute",
     left: 0,
     top: 0,
-
     width: 62,
     height: 62,
     objectFit: "contain",
@@ -138,7 +134,6 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // tanggal pindah kiri
   date: {
     fontSize: 10,
     marginBottom: 18,
@@ -163,7 +158,6 @@ const s = StyleSheet.create({
     marginBottom: 65,
   },
 
-  // garis dihilangkan
   signText: {
     fontSize: 10,
     letterSpacing: 0.4,
@@ -212,7 +206,7 @@ export function SuratJalanPDF({ transaction, logoSrc = "/logo.png" }: Props) {
 
               <Text style={s.itemName}>{item.namaBarang}</Text>
 
-              <Text style={s.itemQty}>{item.qty}</Text>
+              <Text style={s.itemQty}>{item.tonase}</Text>
 
               <Text style={s.itemSat}>{item.satuan}</Text>
             </View>
@@ -225,7 +219,7 @@ export function SuratJalanPDF({ transaction, logoSrc = "/logo.png" }: Props) {
         </Text>
 
         {/* DATE */}
-        <Text style={s.date}>Klaten, {transaction.tanggalFakturPajak}</Text>
+        <Text style={s.date}>Klaten, {transaction.tanggalNota}</Text>
 
         {/* SIGN */}
         <View style={s.signWrapper}>

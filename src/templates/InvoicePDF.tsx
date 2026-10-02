@@ -324,7 +324,7 @@ type PDFItem = {
   namaBarang: string;
   qty: number | string;
   satuan: string;
-  hargaSatuan: number | string;
+  hargaSatuan: number;
   totalHarga: number;
 };
 

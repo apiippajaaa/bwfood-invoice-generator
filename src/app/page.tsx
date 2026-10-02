@@ -20,6 +20,8 @@ import { Background } from "@/components/layouts/Background";
 
 type DocType = "both" | "invoice" | "suratjalan";
 
+const VERSION = "v2.0.1";
+
 const DOC_TYPES: {
   value: DocType;
   label: string;
@@ -293,6 +295,8 @@ export default function HomePage() {
             <span className="text-sm font-medium uppercase tracking-[0.2em] text-white/40">
               BW FOOD Document Generator
             </span>
+
+            <span className="text-xs font-medium text-white/20">{VERSION}</span>
           </div>
 
           <h1 className="text-4xl font-semibold tracking-tight">

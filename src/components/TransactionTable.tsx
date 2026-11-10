@@ -1,7 +1,7 @@
 "use client";
 
 import type { TransactionGroup } from "@/types";
-import { formatRupiah } from "@/lib/formatters";
+import { formatRupiah, formatDateID } from "@/lib/formatters";
 
 interface Props {
   transactions: TransactionGroup[];
@@ -410,7 +410,7 @@ export function TransactionTable({
                           whitespace-nowrap
                         "
                       >
-                        {tanggalNota || "-"}
+                        {tanggalNota ? formatDateID(tanggalNota) : "-"}
                       </span>
                     </td>
 

@@ -141,3 +141,21 @@ export function formatRupiah(n: number): string {
     maximumFractionDigits: 2,
   }).format(n);
 }
+
+export function formatNumberID(value: number): string {
+  return new Intl.NumberFormat("id-ID", {
+      maximumFractionDigits: 2,
+  }).format(value);
+}
+
+export function formatDateID(date: string): string {
+  if (!date) return "";
+
+  const parts = date.split("-");
+
+  if (parts.length !== 3) return date;
+
+  const [year, month, day] = parts;
+
+  return `${day}-${month}-${year}`;
+}

@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from "@react-pdf/renderer";
-
+import { formatNumberID, formatDateID } from "@/lib/formatters";
 import type { TransactionGroup } from "@/types";
 
 const s = StyleSheet.create({
@@ -206,7 +206,7 @@ export function SuratJalanPDF({ transaction, logoSrc = "/logo.png" }: Props) {
 
               <Text style={s.itemName}>{item.namaBarang}</Text>
 
-              <Text style={s.itemQty}>{item.tonase}</Text>
+              <Text style={s.itemQty}>{formatNumberID(item.tonase)}</Text>
 
               <Text style={s.itemSat}>{item.satuan}</Text>
             </View>
@@ -219,7 +219,9 @@ export function SuratJalanPDF({ transaction, logoSrc = "/logo.png" }: Props) {
         </Text>
 
         {/* DATE */}
-        <Text style={s.date}>Klaten, {transaction.tanggalNota}</Text>
+        <Text style={s.date}>
+          Klaten, {formatDateID(transaction.tanggalNota)}
+        </Text>
 
         {/* SIGN */}
         <View style={s.signWrapper}>

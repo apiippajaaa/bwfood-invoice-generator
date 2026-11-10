@@ -12,7 +12,12 @@ import {
 
 import type { TransactionGroup } from "@/types";
 
-import { formatRupiah, terbilang } from "@/lib/formatters";
+import {
+  formatRupiah,
+  formatNumberID,
+  formatDateID,
+  terbilang,
+} from "@/lib/formatters";
 
 const s = StyleSheet.create({
   page: {
@@ -280,30 +285,37 @@ const s = StyleSheet.create({
   signSection: {
     width: "24%",
     alignItems: "center",
+    position: "relative",
   },
 
   signTitle: {
     fontSize: 8,
-    marginBottom: -10,
-  },
-
-  signLine: {
-    width: "100%",
-    borderBottomWidth: 1,
-    borderBottomColor: "#000",
+    marginBottom: 0,
   },
 
   signatureImage: {
     width: 180,
     height: 100,
     objectFit: "contain",
-    marginBottom: -20,
+  },
+
+  signSpace: {
+    width: "100%",
+    height: 100,
+  },
+
+  signLine: {
+    width: "75%",
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
   },
 });
 
 interface Props {
   transaction: TransactionGroup;
   logoSrc?: string;
+  signatureSrc?: string;
+  showSignatureAndStamp?: boolean;
 }
 
 /**
@@ -328,7 +340,12 @@ type PDFItem = {
   totalHarga: number;
 };
 
-export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
+export function InvoicePDF({
+  transaction,
+  logoSrc = "/logo.png",
+  signatureSrc = "/tandatangan.png",
+  showSignatureAndStamp = true,
+}: Props) {
   /**
    * ==========================================================
    * EXCEL AS SOURCE OF TRUTH
@@ -357,6 +374,8 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
    * pada layout PDF yang sekarang.
    */
   const jumlah = transaction.totalDpp;
+  const dppNilaiLain = transaction.totalDppNilaiLain;
+  const bsAllowance = transaction.totalBsAllowance;
 
   /**
    * PPN langsung dari Excel.
@@ -439,7 +458,9 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
 
                 <Text style={s.metaColon}>:</Text>
 
-                <Text style={s.metaValue}>{transaction.tanggalNota}</Text>
+                <Text style={s.metaValue}>
+                  {formatDateID(transaction.tanggalNota)}
+                </Text>
               </View>
 
               <View style={s.metaRow}>
@@ -483,7 +504,9 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
 
               <Text style={[s.cell, s.colBarang]}>{item.namaBarang}</Text>
 
-              <Text style={[s.cell, s.colQty]}>{item.qty}</Text>
+              <Text style={[s.cell, s.colQty]}>
+                {formatNumberID(Number(item.qty))}
+              </Text>
 
               <Text style={[s.cell, s.colSat]}>{item.satuan}</Text>
 
@@ -496,6 +519,24 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
               </Text>
             </View>
           ))}
+
+          {bsAllowance !== 0 && (
+            <View style={s.row}>
+              <Text style={[s.cell, s.colNo]}>{items.length + 1}</Text>
+
+              <Text style={[s.cell, s.colBarang]}>Bs Allowance 1%</Text>
+
+              <Text style={[s.cell, s.colQty]} />
+
+              <Text style={[s.cell, s.colSat]} />
+
+              <Text style={[s.cell, s.colHarga]} />
+
+              <Text style={[s.cell, s.colTotal]}>
+                Rp {formatRupiah(bsAllowance)}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* TOTAL */}
@@ -511,6 +552,12 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
               <Text style={s.totalLabel}>Jumlah</Text>
 
               <Text style={s.totalValue}>Rp {formatRupiah(jumlah)}</Text>
+            </View>
+
+            <View style={s.totalRow}>
+              <Text style={s.totalLabel}>DPP Nilai Lain</Text>
+
+              <Text style={s.totalValue}>Rp {formatRupiah(dppNilaiLain)}</Text>
             </View>
 
             <View style={s.totalRow}>
@@ -563,7 +610,11 @@ export function InvoicePDF({ transaction, logoSrc = "/logo.png" }: Props) {
           <View style={s.signSection}>
             <Text style={s.signTitle}>Hormat Kami,</Text>
 
-            <Image src="/tandatangan.png" style={s.signatureImage} />
+            {showSignatureAndStamp ? (
+              <Image src={signatureSrc} style={s.signatureImage} />
+            ) : (
+              <View style={s.signSpace} />
+            )}
 
             <View style={s.signLine} />
           </View>

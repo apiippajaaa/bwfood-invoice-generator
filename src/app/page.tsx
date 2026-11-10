@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-
+import { useState, useCallback } from "react";
 import { pdf } from "@react-pdf/renderer";
-
 import JSZip from "jszip";
 
 import { parseExcel } from "@/lib/parseExcel";
@@ -12,6 +10,7 @@ import type { TransactionGroup } from "@/types";
 
 import { DropZone } from "@/components/DropZone";
 import { TransactionTable } from "@/components/TransactionTable";
+import { GenerateButton } from "@/components/GenerateButton";
 
 import { InvoicePDF } from "@/templates/InvoicePDF";
 import { SuratJalanPDF } from "@/templates/SuratJalanPDF";
@@ -20,25 +19,7 @@ import { Background } from "@/components/layouts/Background";
 
 type DocType = "both" | "invoice" | "suratjalan";
 
-const VERSION = "v2.0.1";
-
-const DOC_TYPES: {
-  value: DocType;
-  label: string;
-}[] = [
-  {
-    value: "both",
-    label: "Invoice + Surat Jalan",
-  },
-  {
-    value: "invoice",
-    label: "Invoice Saja",
-  },
-  {
-    value: "suratjalan",
-    label: "Surat Jalan Saja",
-  },
-];
+const VERSION = "v2.1.0";
 
 /*
 |--------------------------------------------------------------------------
@@ -46,7 +27,7 @@ const DOC_TYPES: {
 |--------------------------------------------------------------------------
 */
 
-const sanitizeFileName = (value: string) => {
+const sanitizeFileName = (value: string): string => {
   return value
     .replace(/\//g, "-")
     .replace(/[\\:*?"<>|]/g, "")
@@ -55,13 +36,21 @@ const sanitizeFileName = (value: string) => {
     .toUpperCase();
 };
 
-const buildFileName = (documentNumber: string, relationName: string) => {
+const buildFileName = (
+  documentNumber: string,
+  relationName: string
+): string => {
   const safeDocumentNumber = sanitizeFileName(documentNumber);
-
   const safeRelationName = sanitizeFileName(relationName);
 
   return `${safeDocumentNumber} - ${safeRelationName}.pdf`;
 };
+
+/*
+|--------------------------------------------------------------------------
+| PAGE
+|--------------------------------------------------------------------------
+*/
 
 export default function HomePage() {
   /*
@@ -71,15 +60,13 @@ export default function HomePage() {
   */
 
   const [transactions, setTransactions] = useState<TransactionGroup[]>([]);
-
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [fileName, setFileName] = useState("");
 
-  const [docType, setDocType] = useState<DocType>("both");
+  const [docType] = useState<DocType>("both");
 
   const [isLoading, setIsLoading] = useState(false);
-
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [progress, setProgress] = useState(0);
@@ -98,11 +85,11 @@ export default function HomePage() {
 
       setTransactions(groups);
 
-      setSelected(new Set(groups.map((g) => g.noInvoice)));
+      setSelected(new Set(groups.map((group) => group.noInvoice)));
 
       setFileName(name);
     } catch (error) {
-      console.error(error);
+      console.error("Failed to parse Excel:", error);
 
       alert("Gagal membaca file Excel.");
     } finally {
@@ -112,13 +99,13 @@ export default function HomePage() {
 
   /*
   |--------------------------------------------------------------------------
-  | SELECT HANDLER
+  | SELECTION HANDLERS
   |--------------------------------------------------------------------------
   */
 
   const handleToggle = useCallback((id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
+    setSelected((previous) => {
+      const next = new Set(previous);
 
       if (next.has(id)) {
         next.delete(id);
@@ -131,11 +118,13 @@ export default function HomePage() {
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    setSelected((prev) =>
-      prev.size === transactions.length
+    setSelected((previous) => {
+      const allSelected = previous.size === transactions.length;
+
+      return allSelected
         ? new Set()
-        : new Set(transactions.map((t) => t.noInvoice))
-    );
+        : new Set(transactions.map((transaction) => transaction.noInvoice));
+    });
   }, [transactions]);
 
   /*
@@ -144,121 +133,127 @@ export default function HomePage() {
   |--------------------------------------------------------------------------
   */
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setTransactions([]);
-
     setSelected(new Set());
-
     setFileName("");
-
     setProgress(0);
-
-    setDocType("both");
-  };
+  }, []);
 
   /*
   |--------------------------------------------------------------------------
-  | GENERATE PDF
+  | PDF GENERATION
   |--------------------------------------------------------------------------
   */
 
-  const handleGenerate = async () => {
-    const targets = transactions.filter((t) => selected.has(t.noInvoice));
+  const handleGenerate = useCallback(
+    async (showSignatureAndStamp: boolean) => {
+      const targets = transactions.filter((transaction) =>
+        selected.has(transaction.noInvoice)
+      );
 
-    if (targets.length === 0) {
-      return;
-    }
-
-    setIsGenerating(true);
-
-    setProgress(0);
-
-    try {
-      const zip = new JSZip();
-
-      const totalFiles = targets.length * (docType === "both" ? 2 : 1);
-
-      let done = 0;
-
-      for (const transaction of targets) {
-        /*
-        |--------------------------------------------------------------------------
-        | INVOICE PDF
-        |--------------------------------------------------------------------------
-        */
-
-        if (docType === "both" || docType === "invoice") {
-          const blob = await pdf(
-            <InvoicePDF transaction={transaction} />
-          ).toBlob();
-
-          const invoiceFileName = buildFileName(
-            transaction.noInvoice,
-            transaction.namaRelasi
-          );
-
-          zip.file(`invoice/${invoiceFileName}`, blob);
-
-          done++;
-
-          setProgress(Math.round((done / totalFiles) * 100));
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | SURAT JALAN PDF
-        |--------------------------------------------------------------------------
-        */
-
-        if (docType === "both" || docType === "suratjalan") {
-          const blob = await pdf(
-            <SuratJalanPDF transaction={transaction} />
-          ).toBlob();
-
-          const suratJalanFileName = buildFileName(
-            transaction.noSJ,
-            transaction.namaRelasi
-          );
-
-          zip.file(`surat-jalan/${suratJalanFileName}`, blob);
-
-          done++;
-
-          setProgress(Math.round((done / totalFiles) * 100));
-        }
+      if (targets.length === 0 || isGenerating) {
+        return;
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | EXPORT ZIP
-      |--------------------------------------------------------------------------
-      */
-
-      const zipBlob = await zip.generateAsync({
-        type: "blob",
-      });
-
-      const url = URL.createObjectURL(zipBlob);
-
-      const link = document.createElement("a");
-
-      link.href = url;
-
-      link.download = `DOKUMEN-${Date.now()}.zip`;
-
-      link.click();
-
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(error);
-
-      alert("Gagal generate PDF.");
-    } finally {
-      setIsGenerating(false);
-
+      setIsGenerating(true);
       setProgress(0);
-    }
-  };
+
+      try {
+        const zip = new JSZip();
+
+        const totalFiles = targets.length * (docType === "both" ? 2 : 1);
+
+        let completedFiles = 0;
+
+        const updateProgress = () => {
+          completedFiles++;
+
+          setProgress(Math.round((completedFiles / totalFiles) * 100));
+        };
+
+        for (const transaction of targets) {
+          /*
+          |--------------------------------------------------------------------------
+          | INVOICE
+          |--------------------------------------------------------------------------
+          */
+
+          if (docType === "both" || docType === "invoice") {
+            const invoiceBlob = await pdf(
+              <InvoicePDF
+                transaction={transaction}
+                showSignatureAndStamp={showSignatureAndStamp}
+              />
+            ).toBlob();
+
+            const invoiceFileName = buildFileName(
+              transaction.noInvoice,
+              transaction.namaRelasi
+            );
+
+            zip.file(`invoice/${invoiceFileName}`, invoiceBlob);
+
+            updateProgress();
+          }
+
+          /*
+          |--------------------------------------------------------------------------
+          | SURAT JALAN
+          |--------------------------------------------------------------------------
+          */
+
+          if (docType === "both" || docType === "suratjalan") {
+            const suratJalanBlob = await pdf(
+              <SuratJalanPDF transaction={transaction} />
+            ).toBlob();
+
+            const suratJalanFileName = buildFileName(
+              transaction.noSJ,
+              transaction.namaRelasi
+            );
+
+            zip.file(`surat-jalan/${suratJalanFileName}`, suratJalanBlob);
+
+            updateProgress();
+          }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | EXPORT ZIP
+        |--------------------------------------------------------------------------
+        */
+
+        const zipBlob = await zip.generateAsync({
+          type: "blob",
+        });
+
+        const downloadUrl = URL.createObjectURL(zipBlob);
+
+        const link = document.createElement("a");
+
+        link.href = downloadUrl;
+        link.download = `DOKUMEN-${Date.now()}.zip`;
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        window.setTimeout(() => {
+          URL.revokeObjectURL(downloadUrl);
+        }, 1000);
+      } catch (error) {
+        console.error("Failed to generate PDF:", error);
+
+        alert("Gagal generate PDF.");
+      } finally {
+        setIsGenerating(false);
+        setProgress(0);
+      }
+    },
+    [transactions, selected, docType, isGenerating]
+  );
 
   /*
   |--------------------------------------------------------------------------
@@ -268,9 +263,7 @@ export default function HomePage() {
 
   const selectedCount = selected.size;
 
-  const totalFiles = useMemo(() => {
-    return selectedCount * (docType === "both" ? 2 : 1);
-  }, [selectedCount, docType]);
+  const totalFiles = selectedCount * (docType === "both" ? 2 : 1);
 
   /*
   |--------------------------------------------------------------------------
@@ -287,12 +280,29 @@ export default function HomePage() {
         <header className="mb-12">
           <div className="mb-3 flex items-center gap-3">
             <div className="relative flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
+              <span
+                className="
+                absolute inline-flex h-full w-full
+                animate-ping rounded-full
+                bg-sky-400 opacity-75
+              "
+              />
 
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.9)]" />
+              <span
+                className="
+                relative inline-flex h-3 w-3
+                rounded-full bg-sky-400
+                shadow-[0_0_14px_rgba(56,189,248,0.9)]
+              "
+              />
             </div>
 
-            <span className="text-sm font-medium uppercase tracking-[0.2em] text-white/40">
+            <span
+              className="
+              text-sm font-medium uppercase
+              tracking-[0.2em] text-white/40
+            "
+            >
               BW FOOD Document Generator
             </span>
 
@@ -313,30 +323,24 @@ export default function HomePage() {
           <DropZone onFile={handleFile} isLoading={isLoading} />
         ) : (
           <section className="space-y-6">
-            {/* FILE INFO */}
+            {/* FILE INFORMATION */}
             <div
               className="
-                flex flex-col gap-5
-                rounded-3xl
-                border border-white/10
-                bg-white/5
-                p-5
-                backdrop-blur-xl
-
-                lg:flex-row
-                lg:items-center
-                lg:justify-between
-              "
+              flex flex-col gap-5
+              rounded-3xl border border-white/10
+              bg-white/5 p-5 backdrop-blur-xl
+              lg:flex-row lg:items-center
+              lg:justify-between
+            "
             >
-              {/* LEFT */}
+              {/* FILE INFO */}
               <div className="flex items-center gap-4">
                 <div
                   className="
-                    flex h-11 w-11
-                    items-center justify-center
-                    rounded-2xl
-                    bg-white/10
-                  "
+                  flex h-11 w-11
+                  items-center justify-center
+                  rounded-2xl bg-white/10
+                "
                 >
                   <svg
                     className="h-5 w-5 text-white/70"
@@ -353,8 +357,8 @@ export default function HomePage() {
                   </svg>
                 </div>
 
-                <div>
-                  <p className="text-sm font-medium text-white/90">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-white/90">
                     {fileName}
                   </p>
 
@@ -364,24 +368,20 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* RIGHT */}
+              {/* RESET BUTTON */}
               <button
+                type="button"
                 onClick={handleReset}
                 className="
                   group relative overflow-hidden
-                  rounded-2xl
-                  border border-white/10
-                  bg-white/5
-                  px-5 py-3
-                  text-sm font-medium
-                  text-white/70
+                  rounded-2xl border border-white/10
+                  bg-white/5 px-5 py-3
+                  text-sm font-medium text-white/70
                   backdrop-blur-xl
                   transition-all duration-300
                   hover:border-white/20
-                  hover:bg-white/10
-                  hover:text-white
+                  hover:bg-white/10 hover:text-white
                   active:scale-[0.98]
-                  cursor-pointer
                 "
               >
                 <span className="relative z-10 flex items-center gap-2">
@@ -399,7 +399,7 @@ export default function HomePage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={1.8}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8003 0 015.418 15m13.001 0H15"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 015.418 15m13.001 0H15"
                     />
                   </svg>
                   Ganti File
@@ -407,53 +407,7 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* CONTROL */}
-            {/* <div
-              className="
-                rounded-3xl
-                border border-white/10
-                bg-white/5
-                p-5
-                backdrop-blur-xl
-              "
-            >
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white/50">
-                    Jenis Dokumen
-                  </p>
-
-                  <p className="mt-1 text-xs text-white/30">
-                    PPN sekarang otomatis mengikuti nilai asli dari Excel.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {DOC_TYPES.map((type) => (
-                    <button
-                      key={type.value}
-                      onClick={() => setDocType(type.value)}
-                      className={`
-                        rounded-xl px-4 py-2
-                        text-sm font-medium
-                        transition-all
-                        cursor-pointer
-
-                        ${
-                          docType === type.value
-                            ? "bg-white text-black"
-                            : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
-                        }
-                      `}
-                    >
-                      {type.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div> */}
-
-            {/* TABLE */}
+            {/* TRANSACTION TABLE */}
             <TransactionTable
               transactions={transactions}
               selected={selected}
@@ -464,15 +418,12 @@ export default function HomePage() {
             {/* FOOTER */}
             <div
               className="
-                flex flex-col gap-5
-                pt-2
-
-                lg:flex-row
-                lg:items-center
-                lg:justify-between
-              "
+              flex flex-col gap-5 pt-2
+              lg:flex-row lg:items-center
+              lg:justify-between
+            "
             >
-              {/* INFO */}
+              {/* SELECTION INFORMATION */}
               <div className="space-y-1">
                 <p className="text-sm text-white/50">
                   {selectedCount} dari {transactions.length} transaksi dipilih
@@ -485,52 +436,14 @@ export default function HomePage() {
                 )}
               </div>
 
-              {/* BUTTON */}
-              <button
-                onClick={handleGenerate}
-                disabled={selectedCount === 0 || isGenerating}
-                className={`
-                  relative rounded-2xl
-                  px-7 py-3
-                  text-sm font-medium
-                  transition-all
-                  cursor-pointer
-
-                  ${
-                    selectedCount === 0 || isGenerating
-                      ? "cursor-not-allowed bg-white/10 text-white/30"
-                      : "bg-white text-black hover:bg-white/90 active:scale-[0.98]"
-                  }
-                `}
-              >
-                {isGenerating ? (
-                  <span className="flex items-center gap-2">
-                    <svg
-                      className="h-4 w-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
-                    Generating... {progress}%
-                  </span>
-                ) : (
-                  "Generate PDF →"
-                )}
-              </button>
+              {/* GENERATE COMPONENT */}
+              <GenerateButton
+                selectedCount={selectedCount}
+                totalFiles={totalFiles}
+                isGenerating={isGenerating}
+                progress={progress}
+                onGenerate={handleGenerate}
+              />
             </div>
           </section>
         )}
